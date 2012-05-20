@@ -3,7 +3,7 @@
 /* This file works with both POSIX and BSD systems.  It implements job
    control. */
 
-/* Copyright (C) 1989-2009 Free Software Foundation, Inc.
+/* Copyright (C) 1989-2010 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -76,6 +76,10 @@
 #if !defined (errno)
 extern int errno;
 #endif /* !errno */
+
+#if !defined (HAVE_KILLPG)
+extern int killpg __P((pid_t, int));
+#endif
 
 #define DEFAULT_CHILD_MAX 32
 #if !defined (DEBUG)
@@ -246,8 +250,6 @@ static int find_job __P((pid_t, int, PROCESS **));
 static int print_job __P((JOB *, int, int, int));
 static int process_exit_status __P((WAIT));
 static int process_exit_signal __P((WAIT));
-static int job_exit_status __P((int));
-static int job_exit_signal __P((int));
 static int set_job_status_and_cleanup __P((int));
 
 static WAIT job_signal_status __P((int));
@@ -442,7 +444,7 @@ restore_pipeline (discard)
   old_pipeline = the_pipeline;
   the_pipeline = saved_pipeline;
   already_making_children = saved_already_making_children;
-  if (discard)
+  if (discard && old_pipeline)
     discard_pipeline (old_pipeline);
 }
 
@@ -645,7 +647,7 @@ stop_pipeline (async, deferred)
 
   stop_making_children ();
   UNBLOCK_CHILD (oset);
-  return (js.j_current);
+  return (newjob ? i : js.j_current);
 }
 
 /* Functions to manage the list of exited background pids whose status has
@@ -701,8 +703,8 @@ bgp_delete (pid)
   for (prev = p = bgpids.list; p; prev = p, p = p->next)
     if (p->pid == pid)
       {
-        prev->next = p->next;	/* remove from list */
-        break;
+	prev->next = p->next;	/* remove from list */
+	break;
       }
 
   if (p == 0)
@@ -1132,6 +1134,33 @@ add_process (name, pid)
 	p = p->next;
       p->next = t;
     }
+}
+
+/* Create a (dummy) PROCESS with NAME, PID, and STATUS, and make it the last
+   process in jobs[JID]->pipe.  Used by the lastpipe code. */
+void
+append_process (name, pid, status, jid)
+     char *name;
+     pid_t pid;
+     int status;
+     int jid;
+{
+  PROCESS *t, *p;
+
+  t = (PROCESS *)xmalloc (sizeof (PROCESS));
+  t->next = (PROCESS *)NULL;
+  t->pid = pid;
+  /* set process exit status using offset discovered by configure */
+  t->status = (status & 0xff) << WEXITSTATUS_OFFSET;
+  t->running = PS_DONE;
+  t->command = name;
+
+  js.c_reaped++;	/* XXX */
+
+  for (p = jobs[jid]->pipe; p->next != jobs[jid]->pipe; p = p->next)
+    ;
+  p->next = t;
+  t->next = jobs[jid]->pipe;
 }
 
 #if 0
@@ -1708,6 +1737,10 @@ make_child (command, async_p)
   /* Create the child, handle severe errors.  Retry on EAGAIN. */
   while ((pid = fork ()) < 0 && errno == EAGAIN && forksleep < FORKSLEEP_MAX)
     {
+      /* bash-4.2 */
+      /* If we can't create any children, try to reap some dead ones. */
+      waitchld (-1, 0);
+
       sys_error ("fork: retry");
       if (sleep (forksleep) != 0)
 	break;
@@ -1725,6 +1758,7 @@ make_child (command, async_p)
       if (the_pipeline)
 	kill_current_pipeline ();
 
+      last_command_exit_value = EX_NOEXEC;
       throw_to_top_level ();	/* Reset signals, etc. */
     }
 
@@ -2120,7 +2154,7 @@ wait_for_single_pid (pid)
   return r;
 }
 
-/* Wait for all of the backgrounds of this shell to finish. */
+/* Wait for all of the background processes started by this shell to finish. */
 void
 wait_for_background_pids ()
 {
@@ -2301,14 +2335,14 @@ raw_job_exit_status (job)
 /* Return the exit status of job JOB.  This is the exit status of the last
    (rightmost) process in the job's pipeline, modified if the job was killed
    by a signal or stopped. */
-static int
+int
 job_exit_status (job)
      int job;
 {
   return (process_exit_status (raw_job_exit_status (job)));
 }
 
-static int
+int
 job_exit_signal (job)
      int job;
 {
@@ -2342,7 +2376,6 @@ wait_for (pid)
   WAIT s;
   register PROCESS *child;
   sigset_t set, oset;
-  register PROCESS *p;
 
   /* In the case that this code is interrupted, and we longjmp () out of it,
      we are relying on the code in throw_to_top_level () to restore the
@@ -2371,6 +2404,8 @@ wait_for (pid)
 
   if (interactive && job_control == 0)
     QUIT;
+  /* Check for terminating signals and exit the shell if we receive one */
+  CHECK_TERMSIG;
 
   /* If we say wait_for (), then we have a record of this child somewhere.
      If it and none of its peers are running, don't call waitchld(). */
@@ -2449,6 +2484,8 @@ wait_for (pid)
 	 old SIGINT signal handler. */
       if (interactive && job_control == 0)
 	QUIT;
+      /* Check for terminating signals and exit the shell if we receive one */
+      CHECK_TERMSIG;
     }
   while (PRUNNING (child) || (job != NO_JOB && RUNNING (job)));
 
@@ -2540,11 +2577,13 @@ if (job == NO_JOB)
 		}
 	    }
 	}
-      else if ((subshell_environment & SUBSHELL_COMSUB) && wait_sigint_received)
+      else if ((subshell_environment & (SUBSHELL_COMSUB|SUBSHELL_PIPE)) && wait_sigint_received)
 	{
 	  /* If waiting for a job in a subshell started to do command
-	     substitution, simulate getting and being killed by the SIGINT to
-	     pass the status back to our parent. */
+	     substitution or to run a pipeline element that consists of
+	     something like a while loop or a for loop, simulate getting
+	     and being killed by the SIGINT to pass the status back to our
+	     parent. */
 	  s = job_signal_status (job);
 	
 	  if (WIFSIGNALED (s) && WTERMSIG (s) == SIGINT && signal_is_trapped (SIGINT) == 0)
@@ -3042,7 +3081,14 @@ waitchld (wpid, block)
 			: 0;
       if (sigchld || block == 0)
 	waitpid_flags |= WNOHANG;
+      /* Check for terminating signals and exit the shell if we receive one */
       CHECK_TERMSIG;
+
+      if (block == 1 && queue_sigchld == 0 && (waitpid_flags & WNOHANG) == 0)
+	{
+	  internal_warning (_("waitchld: turning on WNOHANG to avoid indefinite block"));
+	  waitpid_flags |= WNOHANG;
+	}
 
       pid = WAITPID (-1, &status, waitpid_flags);
 
@@ -3137,7 +3183,7 @@ waitchld (wpid, block)
   if (job_control && signal_is_trapped (SIGCHLD) && children_exited &&
       trap_list[SIGCHLD] != (char *)IGNORE_SIG)
     {
-      if (this_shell_builtin && this_shell_builtin == wait_builtin)
+      if (posixly_correct && this_shell_builtin && this_shell_builtin == wait_builtin)
 	{
 	  interrupt_immediately = 0;
 	  trap_handler (SIGCHLD);	/* set pending_traps[SIGCHLD] */
@@ -4098,7 +4144,13 @@ itrace("mark_dead_jobs_as_notified: child_max = %d ndead = %d ndeadproc = %d", j
 }
 
 /* Here to allow other parts of the shell (like the trap stuff) to
-   unfreeze the jobs list. */
+   freeze and unfreeze the jobs list. */
+void
+freeze_jobs_list ()
+{
+  jobs_list_frozen = 1;
+}
+
 void
 unfreeze_jobs_list ()
 {
@@ -4200,6 +4252,25 @@ void
 close_pgrp_pipe ()
 {
   sh_closepipe (pgrp_pipe);
+}
+
+void
+save_pgrp_pipe (p, clear)
+     int *p;
+     int clear;
+{
+  p[0] = pgrp_pipe[0];
+  p[1] = pgrp_pipe[1];
+  if (clear)
+    pgrp_pipe[0] = pgrp_pipe[1] = -1;
+}
+
+void
+restore_pgrp_pipe (p)
+     int *p;
+{
+  pgrp_pipe[0] = p[0];
+  pgrp_pipe[1] = p[1];
 }
 
 #endif /* PGRP_PIPE */

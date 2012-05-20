@@ -140,3 +140,7 @@ three
 one
 two
 three
+4.2
+echo ${BASH_VERSION%\.*}
+4.2
+	 echo ${BASH_VERSION%\.*}

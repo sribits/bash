@@ -63,7 +63,7 @@ static const int brace_arg_separator = ',';
 static int brace_gobbler __P((char *, size_t, int *, int));
 static char **expand_amble __P((char *, size_t, int));
 static char **expand_seqterm __P((char *, size_t));
-static char **mkseq __P((int, int, int, int, int));
+static char **mkseq __P((intmax_t, intmax_t, int, int, int));
 static char **array_concat __P((char **, char **));
 #else
 static int brace_gobbler ();
@@ -307,13 +307,15 @@ expand_amble (text, tlen, flags)
 
 static char **
 mkseq (start, end, incr, type, width)
-     int start, end, incr, type, width;
+     intmax_t start, end;
+     int incr, type, width;
 {
-  int n, i;
+  intmax_t n;
+  int i;
   char **result, *t;
 
-  n = abs (end - start) + 1;
-  result = strvec_create (n + 1);
+  i = abs (end - start) + 1;
+  result = strvec_create (i + 1);
 
   if (incr == 0)
     incr = 1;
@@ -335,8 +337,9 @@ mkseq (start, end, incr, type, width)
 	result[i++] = itos (n);
       else if (type == ST_ZINT)
 	{
-	  int len;
-	  len = asprintf (&t, "%0*d", width, n);
+	  int len, arg;
+	  arg = n;
+	  len = asprintf (&t, "%0*d", width, arg);
 	  result[i++] = t;
 	}
       else
@@ -362,9 +365,10 @@ expand_seqterm (text, tlen)
      size_t tlen;
 {
   char *t, *lhs, *rhs;
-  int i, lhs_t, rhs_t, lhs_v, rhs_v, incr, lhs_l, rhs_l, width;
+  int i, lhs_t, rhs_t, incr, lhs_l, rhs_l, width;
+  intmax_t lhs_v, rhs_v;
   intmax_t tl, tr;
-  char **result, *ep;
+  char **result, *ep, *oep;
 
   t = strstr (text, BRACE_SEQ_SPECIFIER);
   if (t == 0)
@@ -410,10 +414,12 @@ expand_seqterm (text, tlen)
   incr = 1;
   if (rhs_t != ST_BAD)
     {
+      oep = ep;
       if (ep && *ep == '.' && ep[1] == '.' && ep[2])
 	incr = strtoimax (ep + 2, &ep, 10);
       if (*ep != 0)
 	rhs_t = ST_BAD;			/* invalid incr */
+      tlen -= ep - oep;
     }
 
   if (lhs_t != rhs_t || lhs_t == ST_BAD || rhs_t == ST_BAD)
@@ -449,6 +455,11 @@ expand_seqterm (text, tlen)
 	width = rhs_l, lhs_t = ST_ZINT;
       if (rhs_l > 2 && rhs[0] == '-' && rhs[1] == '0' && width < rhs_l)
 	width = rhs_l, lhs_t = ST_ZINT;
+
+      if (width < lhs_l && lhs_t == ST_ZINT)
+        width = lhs_l;
+      if (width < rhs_l && lhs_t == ST_ZINT)
+        width = rhs_l;
     }
 
   result = mkseq (lhs_v, rhs_v, incr, lhs_t, width);

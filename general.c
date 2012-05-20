@@ -98,7 +98,7 @@ string_to_rlimtype (s)
   neg = 0;
   while (s && *s && whitespace (*s))
     s++;
-  if (*s == '-' || *s == '+')
+  if (s && (*s == '-' || *s == '+'))
     {
       neg = *s == '-';
       s++;
@@ -285,7 +285,7 @@ assignment (string, flags)
 #if defined (ARRAY_VARS)
       if (c == '[')
 	{
-	  newi = skipsubscript (string, indx);
+	  newi = skipsubscript (string, indx, 0);
 	  if (string[newi++] != ']')
 	    return (0);
 	  if (string[newi] == '+' && string[newi+1] == '=')
@@ -361,6 +361,16 @@ sh_validfd (fd)
      int fd;
 {
   return (fcntl (fd, F_GETFD, 0) >= 0);
+}
+
+int
+fd_ispipe (fd)
+     int fd;
+{
+  errno = 0;
+  if (lseek ((fd), 0L, SEEK_CUR) < 0)
+    return (errno == ESPIPE);
+  return 0;
 }
 
 /* There is a bug in the NeXT 2.1 rlogind that causes opens
@@ -549,6 +559,22 @@ file_iswdir (fn)
   return (file_isdir (fn) && sh_eaccess (fn, W_OK) == 0);
 }
 
+/* Return 1 if STRING is "." or "..", optionally followed by a directory
+   separator */
+int
+dot_or_dotdot (string)
+     const char *string;
+{
+  if (string == 0 || *string == '\0' || *string != '.')
+    return (0);
+
+  /* string[0] == '.' */
+  if (PATHSEP(string[1]) || (string[1] == '.' && PATHSEP(string[2])))
+    return (1);
+
+  return (0);
+}
+
 /* Return 1 if STRING contains an absolute pathname, else 0.  Used by `cd'
    to decide whether or not to look up a directory name in $CDPATH. */
 int
@@ -577,7 +603,7 @@ int
 absolute_program (string)
      const char *string;
 {
-  return ((char *)xstrchr (string, '/') != (char *)NULL);
+  return ((char *)mbschr (string, '/') != (char *)NULL);
 }
 
 /* **************************************************************** */
@@ -717,7 +743,7 @@ trim_pathname (name, maxlen)
   for (ndirs = 0, ntail = nbeg; *ntail; ntail++)
     if (*ntail == '/')
       ndirs++;
-  if (ndirs <= nskip)
+  if (ndirs < nskip)
     return name;
 
   for (ntail = (*nend == '/') ? nend : nend - 1; ntail > nbeg; ntail--)

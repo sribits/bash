@@ -1,7 +1,7 @@
 This file is kill.def, from which is created kill.c.
 It implements the builtin "kill" in Bash.
 
-Copyright (C) 1987-2009 Free Software Foundation, Inc.
+Copyright (C) 1987-2010 Free Software Foundation, Inc.
 
 This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -121,6 +121,7 @@ kill_builtin (list)
 	      else
 		sig = decode_signal (sigspec, dflags);
 	      list = list->next;
+	      saw_signal++;
 	    }
 	  else
 	    {
@@ -141,7 +142,7 @@ kill_builtin (list)
       /* If this is a signal specification then process it.  We only process
 	 the first one seen; other arguments may signify process groups (e.g,
 	 -num == process group num). */
-      else if ((*word == '-') && !saw_signal)
+      else if (*word == '-' && saw_signal == 0)
 	{
 	  sigspec = word + 1;
 	  sig = decode_signal (sigspec, dflags);

@@ -22,7 +22,7 @@
 srcdir = .
 VPATH = .
 topdir = ../..
-BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.0
+BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.2
 
 libdir = ${exec_prefix}/lib
 

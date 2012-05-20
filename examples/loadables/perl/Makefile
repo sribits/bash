@@ -30,7 +30,7 @@ includedir = ${prefix}/include
 datarootdir = ${prefix}/share
 
 topdir = ../../..
-BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.0
+BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.2
 srcdir = .
 VPATH = .
 

@@ -1,6 +1,6 @@
 /* common.h -- extern declarations for functions defined in common.c. */
 
-/* Copyright (C) 1993-2004 Free Software Foundation, Inc.
+/* Copyright (C) 1993-2010 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -139,7 +139,11 @@ extern char **get_shopt_options __P((void));
 extern int shopt_setopt __P((char *, int));
 extern int shopt_listopt __P((char *, int));
 
-extern int set_login_shell __P((int));
+extern int set_login_shell __P((char *, int));
+
+extern void set_bashopts __P((void));
+extern void parse_bashopts __P((char *));
+extern void initialize_bashopts __P((int));
 
 /* Functions from type.def */
 extern int describe_command __P((char *, int));

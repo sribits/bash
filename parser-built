@@ -61,29 +61,31 @@
      BANG = 277,
      TIME = 278,
      TIMEOPT = 279,
-     WORD = 280,
-     ASSIGNMENT_WORD = 281,
-     NUMBER = 282,
-     ARITH_CMD = 283,
-     ARITH_FOR_EXPRS = 284,
-     COND_CMD = 285,
-     AND_AND = 286,
-     OR_OR = 287,
-     GREATER_GREATER = 288,
-     LESS_LESS = 289,
-     LESS_AND = 290,
-     LESS_LESS_LESS = 291,
-     GREATER_AND = 292,
-     SEMI_SEMI = 293,
-     SEMI_AND = 294,
-     SEMI_SEMI_AND = 295,
-     LESS_LESS_MINUS = 296,
-     AND_GREATER = 297,
-     AND_GREATER_GREATER = 298,
-     LESS_GREATER = 299,
-     GREATER_BAR = 300,
-     BAR_AND = 301,
-     yacc_EOF = 302
+     TIMEIGN = 280,
+     WORD = 281,
+     ASSIGNMENT_WORD = 282,
+     REDIR_WORD = 283,
+     NUMBER = 284,
+     ARITH_CMD = 285,
+     ARITH_FOR_EXPRS = 286,
+     COND_CMD = 287,
+     AND_AND = 288,
+     OR_OR = 289,
+     GREATER_GREATER = 290,
+     LESS_LESS = 291,
+     LESS_AND = 292,
+     LESS_LESS_LESS = 293,
+     GREATER_AND = 294,
+     SEMI_SEMI = 295,
+     SEMI_AND = 296,
+     SEMI_SEMI_AND = 297,
+     LESS_LESS_MINUS = 298,
+     AND_GREATER = 299,
+     AND_GREATER_GREATER = 300,
+     LESS_GREATER = 301,
+     GREATER_BAR = 302,
+     BAR_AND = 303,
+     yacc_EOF = 304
    };
 #endif
 /* Tokens.  */
@@ -109,36 +111,38 @@
 #define BANG 277
 #define TIME 278
 #define TIMEOPT 279
-#define WORD 280
-#define ASSIGNMENT_WORD 281
-#define NUMBER 282
-#define ARITH_CMD 283
-#define ARITH_FOR_EXPRS 284
-#define COND_CMD 285
-#define AND_AND 286
-#define OR_OR 287
-#define GREATER_GREATER 288
-#define LESS_LESS 289
-#define LESS_AND 290
-#define LESS_LESS_LESS 291
-#define GREATER_AND 292
-#define SEMI_SEMI 293
-#define SEMI_AND 294
-#define SEMI_SEMI_AND 295
-#define LESS_LESS_MINUS 296
-#define AND_GREATER 297
-#define AND_GREATER_GREATER 298
-#define LESS_GREATER 299
-#define GREATER_BAR 300
-#define BAR_AND 301
-#define yacc_EOF 302
+#define TIMEIGN 280
+#define WORD 281
+#define ASSIGNMENT_WORD 282
+#define REDIR_WORD 283
+#define NUMBER 284
+#define ARITH_CMD 285
+#define ARITH_FOR_EXPRS 286
+#define COND_CMD 287
+#define AND_AND 288
+#define OR_OR 289
+#define GREATER_GREATER 290
+#define LESS_LESS 291
+#define LESS_AND 292
+#define LESS_LESS_LESS 293
+#define GREATER_AND 294
+#define SEMI_SEMI 295
+#define SEMI_AND 296
+#define SEMI_SEMI_AND 297
+#define LESS_LESS_MINUS 298
+#define AND_GREATER 299
+#define AND_GREATER_GREATER 300
+#define LESS_GREATER 301
+#define GREATER_BAR 302
+#define BAR_AND 303
+#define yacc_EOF 304
 
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 316 "/Users/chet/src/bash/src/parse.y"
+#line 323 "/Users/chet/src/bash/src/parse.y"
 {
   WORD_DESC *word;		/* the word that we read. */
   int number;			/* the number that we read. */
@@ -149,7 +153,7 @@ typedef union YYSTYPE
   PATTERN_LIST *pattern;
 }
 /* Line 1489 of yacc.c.  */
-#line 153 "y.tab.h"
+#line 157 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

@@ -16,13 +16,13 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 PACKAGE = bash
-VERSION = 4.0-release
+VERSION = 4.2-release
 
 SHELL = /bin/sh
 
 srcdir = .
 top_srcdir = ../..
-top_builddir = /home/smalik/Downloads/arm/bash/bash-4.0
+top_builddir = /home/smalik/Downloads/arm/bash/bash-4.2
 
 
 prefix = /usr/local

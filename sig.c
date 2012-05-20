@@ -1,6 +1,6 @@
 /* sig.c - interface for shell signal handlers and signal initialization. */
 
-/* Copyright (C) 1994-2009 Free Software Foundation, Inc.
+/* Copyright (C) 1994-2010 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -55,10 +55,15 @@
 extern int last_command_exit_value;
 extern int last_command_exit_signal;
 extern int return_catch_flag;
-extern int loop_level, continuing, breaking;
+extern int loop_level, continuing, breaking, funcnest;
 extern int executing_list;
 extern int comsub_ignore_return;
 extern int parse_and_execute_level, shell_initialized;
+#if defined (HISTORY)
+extern int history_lines_this_session;
+#endif
+
+extern void initialize_siglist ();
 
 /* Non-zero after SIGINT. */
 volatile int interrupt_state = 0;
@@ -214,7 +219,8 @@ static int termsigs_initialized = 0;
 
 /* Initialize signals that will terminate the shell to do some
    unwind protection.  For non-interactive shells, we only call
-   this when a trap is defined for EXIT (0). */
+   this when a trap is defined for EXIT (0) or when trap is run
+   to display signal dispositions. */
 void
 initialize_terminating_signals ()
 {
@@ -248,7 +254,8 @@ initialize_terminating_signals ()
       XSAFLAGS(i) = oact.sa_flags;
       /* Don't do anything with signals that are ignored at shell entry
 	 if the shell is not interactive. */
-      if (!interactive_shell && XHANDLER (i) == SIG_IGN)
+      /* XXX - should we do this for interactive shells, too? */
+      if (interactive_shell == 0 && XHANDLER (i) == SIG_IGN)
 	{
 	  sigaction (XSIG (i), &oact, &act);
 	  set_signal_ignored (XSIG (i));
@@ -271,7 +278,8 @@ initialize_terminating_signals ()
       XSAFLAGS(i) = 0;
       /* Don't do anything with signals that are ignored at shell entry
 	 if the shell is not interactive. */
-      if (!interactive_shell && XHANDLER (i) == SIG_IGN)
+      /* XXX - should we do this for interactive shells, too? */
+      if (interactive_shell == 0 && XHANDLER (i) == SIG_IGN)
 	{
 	  signal (XSIG (i), SIG_IGN);
 	  set_signal_ignored (XSIG (i));
@@ -367,7 +375,7 @@ top_level_cleanup ()
 #endif /* PROCESS_SUBSTITUTION */
 
   run_unwind_protects ();
-  loop_level = continuing = breaking = 0;
+  loop_level = continuing = breaking = funcnest = 0;
   executing_list = comsub_ignore_return = return_catch_flag = 0;
 }
 
@@ -418,7 +426,7 @@ throw_to_top_level ()
 #endif /* PROCESS_SUBSTITUTION */
 
   run_unwind_protects ();
-  loop_level = continuing = breaking = 0;
+  loop_level = continuing = breaking = funcnest = 0;
   executing_list = comsub_ignore_return = return_catch_flag = 0;
 
   if (interactive && print_newline)
@@ -448,11 +456,57 @@ sighandler
 termsig_sighandler (sig)
      int sig;
 {
+  /* If we get called twice with the same signal before handling it,
+     terminate right away. */
+  if (
+#ifdef SIGHUP
+    sig != SIGHUP &&
+#endif
+#ifdef SIGINT
+    sig != SIGINT &&
+#endif
+#ifdef SIGDANGER
+    sig != SIGDANGER &&
+#endif
+#ifdef SIGPIPE
+    sig != SIGPIPE &&
+#endif
+#ifdef SIGALRM
+    sig != SIGALRM &&
+#endif
+#ifdef SIGTERM
+    sig != SIGTERM &&
+#endif
+#ifdef SIGXCPU
+    sig != SIGXCPU &&
+#endif
+#ifdef SIGXFSZ
+    sig != SIGXFSZ &&
+#endif
+#ifdef SIGVTALRM
+    sig != SIGVTALRM &&
+#endif
+#ifdef SIGLOST
+    sig != SIGLOST &&
+#endif
+#ifdef SIGUSR1
+    sig != SIGUSR1 &&
+#endif
+#ifdef SIGUSR2
+   sig != SIGUSR2 &&
+#endif
+   sig == terminating_signal)
+    terminate_immediately = 1;
+
   terminating_signal = sig;
 
   /* XXX - should this also trigger when interrupt_immediately is set? */
   if (terminate_immediately)
     {
+#if defined (HISTORY)
+      /* XXX - will inhibit history file being written */
+      history_lines_this_session = 0;
+#endif
       terminate_immediately = 0;
       termsig_handler (sig);
     }
@@ -484,7 +538,7 @@ termsig_handler (sig)
 #endif /* HISTORY */
 
 #if defined (JOB_CONTROL)
-  if (interactive && sig == SIGHUP)
+  if (sig == SIGHUP && (interactive || (subshell_environment & (SUBSHELL_COMSUB|SUBSHELL_PROCSUB))))
     hangup_all_jobs ();
   end_job_control ();
 #endif /* JOB_CONTROL */
@@ -494,7 +548,7 @@ termsig_handler (sig)
 #endif /* PROCESS_SUBSTITUTION */
 
   /* Reset execution context */
-  loop_level = continuing = breaking = 0;
+  loop_level = continuing = breaking = funcnest = 0;
   executing_list = comsub_ignore_return = return_catch_flag = 0;
 
   run_exit_trap ();
@@ -519,6 +573,7 @@ sigint_sighandler (sig)
   if (interrupt_immediately)
     {
       interrupt_immediately = 0;
+      last_command_exit_value = 128 + sig;
       throw_to_top_level ();
     }
 
@@ -607,12 +662,13 @@ set_signal_handler (sig, handler)
 
   act.sa_handler = handler;
   act.sa_flags = 0;
-#if 0
-  if (sig == SIGALRM)
-    act.sa_flags |= SA_INTERRUPT;	/* XXX */
-  else
+
+  /* XXX - bash-4.2 */
+  /* We don't want a child death to interrupt interruptible system calls, even
+     if we take the time to reap children */
+  if (sig == SIGCHLD)
     act.sa_flags |= SA_RESTART;		/* XXX */
-#endif
+
   sigemptyset (&act.sa_mask);
   sigemptyset (&oact.sa_mask);
   sigaction (sig, &act, &oact);

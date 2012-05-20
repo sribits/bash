@@ -18,7 +18,7 @@
 srcdir = .
 VPATH = .
 topdir = ../..
-BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.0
+BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.2
 
 INSTALL = /usr/bin/install -c
 INSTALL_PROGRAM = ${INSTALL}
@@ -112,6 +112,7 @@ alloca.o: $(BUILD_DIR)/config.h
 malloc.o: $(BUILD_DIR)/config.h $(topdir)/bashtypes.h getpagesize.h
 xmalloc.o: $(BUILD_DIR)/config.h $(BASHINCDIR)/ansi_stdlib.h
 trace.o: ${BUILD_DIR}/config.h
+stats.o: ${BUILD_DIR}/config.h
 table.o: ${BUILD_DIR}/config.h
 watch.o: ${BUILD_DIR}/config.h
 

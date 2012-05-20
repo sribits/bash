@@ -1,6 +1,6 @@
-/* evalstring.c - evaluate a string as one or more shell commands. 
+/* evalstring.c - evaluate a string as one or more shell commands. */
 
-/* Copyright (C) 1996-2009 Free Software Foundation, Inc.
+/* Copyright (C) 1996-2010 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -43,6 +43,7 @@
 #include "../execute_cmd.h"
 #include "../redir.h"
 #include "../trap.h"
+#include "../bashintl.h"
 
 #include <y.tab.h>
 
@@ -51,6 +52,7 @@
 #endif
 
 #include "common.h"
+#include "builtext.h"
 
 #if !defined (errno)
 extern int errno;
@@ -67,6 +69,7 @@ extern int loop_level;
 extern int executing_list;
 extern int comsub_ignore_return;
 extern int posixly_correct;
+extern sh_builtin_func_t *this_shell_builtin;
 
 int parse_and_execute_level = 0;
 
@@ -323,6 +326,15 @@ parse_and_execute (string, from_file, flags)
       else
 	{
 	  last_result = EXECUTION_FAILURE;
+
+	  if (interactive_shell == 0 && this_shell_builtin &&
+	      (this_shell_builtin == source_builtin || this_shell_builtin == eval_builtin) &&
+	      last_command_exit_value == EX_BADSYNTAX && posixly_correct)
+	    {
+	      should_jump_to_top_level = 1;
+	      code = ERREXIT;
+	      last_command_exit_value = EX_BADUSAGE;
+	    }
 
 	  /* Since we are shell compatible, syntax errors in a script
 	     abort the execution of the script.  Right? */

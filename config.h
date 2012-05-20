@@ -116,6 +116,10 @@
    pattern matching. */
 #define EXTENDED_GLOB 1
 
+/* Define EXTGLOB_DEFAULT to the value you'd like the extglob shell option
+   to have by default */
+#define EXTGLOB_DEFAULT 0
+
 /* Define COND_COMMAND if you want the ksh-style [[...]] conditional
    command. */
 #define COND_COMMAND 1
@@ -211,6 +215,9 @@
 
 /* The number of bytes in a double (hopefully 8). */
 #define SIZEOF_DOUBLE 8
+
+/* The number of bytes in an `intmax_t'. */
+#define SIZEOF_INTMAX_T 8
 
 /* The number of bytes in a `long long', if we have one. */
 #define SIZEOF_LONG_LONG 8
@@ -412,6 +419,8 @@
 
 #define HAVE_STRUCT_TIMEZONE 1
 
+#define WEXITSTATUS_OFFSET 0
+
 /* Characteristics of definitions in the system header files. */
 
 #define HAVE_GETPW_DECLS 1
@@ -495,6 +504,8 @@
 /* Define if you have the /dev/stdin device. */
 #define HAVE_DEV_STDIN 1
 
+/* The type of iconv's `inbuf' argument */
+#define ICONV_CONST 
 
 /* Type and behavior of signal handling functions. */
 
@@ -541,17 +552,20 @@
 /* Define if you don't have vprintf but do have _doprnt.  */
 /* #undef HAVE_DOPRNT */
 
+/* Define if you have the dprintf function.  */
+#define HAVE_DPRINTF 1
+
 /* Define if you have the dup2 function.  */
 #define HAVE_DUP2 1
 
 /* Define if you have the eaccess function.  */
 #define HAVE_EACCESS 1
 
+/* Define if you have the faccessat function.  */
+#define HAVE_FACCESSAT 1
+
 /* Define if you have the fcntl function.  */
 #define HAVE_FCNTL 1
-
-/* Define if you have the fdprintf function. */
-/* #undef HAVE_FDPRINTF */
 
 /* Define if you have the fpurge/__fpurge function.  */
 /* #undef HAVE_FPURGE */
@@ -609,6 +623,9 @@
 /* Define if you have the getwd function.  */
 /* #undef HAVE_GETWD */
 
+/* Define if you have the iconv function.  */
+#define HAVE_ICONV 1
+
 /* Define if you have the inet_aton function.  */
 #define HAVE_INET_ATON 1
 
@@ -654,14 +671,26 @@
 /* Define if you have the lstat function. */
 #define HAVE_LSTAT 1
 
+/* Define if you have the locale_charset function. */
+/* #undef HAVE_LOCALE_CHARSET */
+
 /* Define if you have the mbrlen function. */
 #define HAVE_MBRLEN 1
 
 /* Define if you have the mbrtowc function. */
 #define HAVE_MBRTOWC 1
 
+/* Define if you have the mbscasecmp function. */
+/* #undef HAVE_MBSCASECMP */
+
+/* Define if you have the mbschr function. */
+/* #undef HAVE_MBSCHR */
+
 /* Define if you have the mbscmp function. */
 /* #undef HAVE_MBSCMP */
+
+/* Define if you have the mbsnrtowcs function. */
+#define HAVE_MBSNRTOWCS 1
 
 /* Define if you have the mbsrtowcs function. */
 #define HAVE_MBSRTOWCS 1
@@ -739,8 +768,14 @@
 /* Define if you have the strcasecmp function.  */
 #define HAVE_STRCASECMP 1
 
+/* Define if you have the strcasestr function.  */
+#define HAVE_STRCASESTR 1
+
 /* Define if you have the strchr function.  */
 #define HAVE_STRCHR 1
+
+/* Define if you have the strchrnul function.  */
+#define HAVE_STRCHRNUL 1
 
 /* Define if you have the strcoll function.  */
 /* #undef HAVE_STRCOLL */
@@ -786,6 +821,9 @@
 
 /* Define if you have the sysconf function. */
 #define HAVE_SYSCONF 1
+
+/* Define if you have the syslog function. */
+#define HAVE_SYSLOG 1
 
 /* Define if you have the tcgetattr function.  */
 #define HAVE_TCGETATTR 1
@@ -843,6 +881,9 @@
 
 /* Define if you have the wctype function.  */
 #define HAVE_WCTYPE 1
+
+/* Define if you have the wcswidth function.  */
+#define HAVE_WCSWIDTH 1
 
 /* Define if you have the wcwidth function.  */
 #define HAVE_WCWIDTH 1
@@ -912,6 +953,9 @@
 /* Define if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
 
+/* Define if you have the <syslog.h> header file. */
+#define HAVE_SYSLOG_H 1
+
 /* Define if you have the <sys/dir.h> header file.  */
 /* #undef HAVE_SYS_DIR_H */
 
@@ -967,6 +1011,9 @@
 
 /* Define if you have the <termios.h> header file.  */
 #define HAVE_TERMIOS_H 1
+
+/* Define if you have the <ulimit.h> header file.  */
+#define HAVE_ULIMIT_H 1
 
 /* Define if you have the <unistd.h> header file.  */
 #define HAVE_UNISTD_H 1

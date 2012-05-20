@@ -9,7 +9,7 @@
 # General Public License and is *not* in the public domain.
 
 PACKAGE = bash
-VERSION = 4.0-release
+VERSION = 4.2-release
 
 SHELL = /bin/sh
 
@@ -19,7 +19,7 @@ top_srcdir = ..
 
 
 topdir = ..
-BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.0
+BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.2
 
 prefix = /usr/local
 exec_prefix = ${prefix}

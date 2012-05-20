@@ -32,6 +32,7 @@
 #if defined (HAVE_UNISTD_H)
 #  include <unistd.h>
 #endif
+#include <errno.h>
 
 #include "bashansi.h"
 
@@ -42,6 +43,10 @@
 #include "pathexp.h"
 #include "hashcmd.h"
 #include "findcmd.h"	/* matching prototypes and declarations */
+
+#if !defined (errno)
+extern int errno;
+#endif
 
 extern int posixly_correct;
 
@@ -93,7 +98,18 @@ file_status (name)
 
   r = FS_EXISTS;
 
-#if defined (AFS)
+#if defined (HAVE_EACCESS)
+  /* Use eaccess(2) if we have it to take things like ACLs and other
+     file access mechanisms into account.  eaccess uses the effective
+     user and group IDs, not the real ones.  We could use sh_eaccess,
+     but we don't want any special treatment for /dev/fd. */
+  if (eaccess (name, X_OK) == 0)
+    r |= FS_EXECABLE;
+  if (eaccess (name, R_OK) == 0)
+    r |= FS_READABLE;
+
+  return r;
+#elif defined (AFS)
   /* We have to use access(2) to determine access because AFS does not
      support Unix file system semantics.  This may produce wrong
      answers for non-AFS files when ruid != euid.  I hate AFS. */
@@ -103,7 +119,7 @@ file_status (name)
     r |= FS_READABLE;
 
   return r;
-#else /* !AFS */
+#else /* !HAVE_EACCESS && !AFS */
 
   /* Find out if the file is actually executable.  By definition, the
      only other criteria is that the file has an execute bit set that
@@ -161,6 +177,10 @@ executable_file (file)
   int s;
 
   s = file_status (file);
+#if defined EISDIR
+  if (s & FS_DIRECTORY)
+    errno = EISDIR;	/* let's see if we can improve error messages */
+#endif
   return ((s & FS_EXECABLE) && ((s & FS_DIRECTORY) == 0));
 }
 

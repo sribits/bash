@@ -1,6 +1,6 @@
 /* arrayfunc.c -- High-level array functions used by other parts of the shell. */
 
-/* Copyright (C) 2001-2009 Free Software Foundation, Inc.
+/* Copyright (C) 2001-2010 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -44,7 +44,7 @@ static SHELL_VAR *bind_array_var_internal __P((SHELL_VAR *, arrayind_t, char *, 
 
 static char *quote_assign __P((const char *));
 static void quote_array_assignment_chars __P((WORD_LIST *));
-static char *array_value_internal __P((char *, int, int, int *));
+static char *array_value_internal __P((char *, int, int, int *, arrayind_t *));
 
 /* Standard error message to use when encountering an invalid array subscript */
 const char * const bash_badsub_errmsg = N_("bad array subscript");
@@ -98,7 +98,7 @@ convert_var_to_assoc (var)
   oldval = value_cell (var);
   hash = assoc_create (0);
   if (oldval)
-    assoc_insert (hash, "0", oldval);
+    assoc_insert (hash, savestring ("0"), oldval);
 
   FREE (value_cell (var));
   var_setassoc (var, hash);
@@ -407,6 +407,7 @@ expand_compound_array_assignment (var, value, flags)
   return nlist;
 }
 
+/* Callers ensure that VAR is not NULL */
 void
 assign_compound_array_list (var, nlist, flags)
      SHELL_VAR *var;
@@ -431,9 +432,9 @@ assign_compound_array_list (var, nlist, flags)
      value. */
   if ((flags & ASS_APPEND) == 0)
     {
-      if (array_p (var) && a)
+      if (a && array_p (var))
 	array_flush (a);
-      else if (assoc_p (var) && h)
+      else if (h && assoc_p (var))
 	assoc_flush (h);
     }
 
@@ -447,7 +448,7 @@ assign_compound_array_list (var, nlist, flags)
       /* We have a word of the form [ind]=value */
       if ((list->word->flags & W_ASSIGNMENT) && w[0] == '[')
 	{
-	  len = skipsubscript (w, 0);
+	  len = skipsubscript (w, 0, (var && assoc_p (var) != 0));
 
 	  /* XXX - changes for `+=' */
  	  if (w[len] != ']' || (w[len+1] != '=' && (w[len+1] != '+' || w[len+2] != '=')))
@@ -560,8 +561,9 @@ quote_assign (string)
 {
   size_t slen;
   int saw_eq;
-  char *temp, *t;
+  char *temp, *t, *subs;
   const char *s, *send;
+  int ss, se;
   DECLARE_MBSTATE;
 
   slen = strlen (string);
@@ -573,6 +575,20 @@ quote_assign (string)
     {
       if (*s == '=')
 	saw_eq = 1;
+      if (saw_eq == 0 && *s == '[')		/* looks like a subscript */
+	{
+	  ss = s - string;
+	  se = skipsubscript (string, ss, 0);
+	  subs = substring (s, ss, se);
+	  *t++ = '\\';
+	  strcpy (t, subs);
+	  t += se - ss;
+	  *t++ = '\\';
+	  *t++ = ']';
+	  s += se + 1;
+	  free (subs);
+	  continue;
+	}
       if (saw_eq == 0 && (glob_char_p (s) || isifs (*s)))
 	*t++ = '\\';
 
@@ -596,7 +612,7 @@ quote_array_assignment_chars (list)
       if (l->word == 0 || l->word->word == 0 || l->word->word[0] == '\0')
 	continue;	/* should not happen, but just in case... */
       /* Don't bother if it doesn't look like [ind]=value */
-      if (l->word->word[0] != '[' || xstrchr (l->word->word, '=') == 0) /* ] */
+      if (l->word->word[0] != '[' || mbschr (l->word->word, '=') == 0) /* ] */
 	continue;
       nword = quote_assign (l->word->word);
       free (l->word->word);
@@ -604,64 +620,7 @@ quote_array_assignment_chars (list)
     }
 }
 
-/* This function assumes s[i] == '['; returns with s[ret] == ']' if
-   an array subscript is correctly parsed. */
-int
-skipsubscript (s, i)
-     const char *s;
-     int i;
-{
-  int count, c;
-#if defined (HANDLE_MULTIBYTE)
-  mbstate_t state, state_bak;
-  size_t slength, mblength;
-#endif
-
-#if defined (HANDLE_MULTIBYTE)
-  memset (&state, '\0', sizeof (mbstate_t));
-  slength = strlen (s + i);
-#endif
-  
-  count = 1;
-  while (count)
-    {
-      /* Advance one (possibly multibyte) character in S starting at I. */
-#if defined (HANDLE_MULTIBYTE)
-      if (MB_CUR_MAX > 1)
-	{
-	  state_bak = state;
-	  mblength = mbrlen (s + i, slength, &state);
-
-	  if (MB_INVALIDCH (mblength))
-	    {
-	      state = state_bak;
-	      i++;
-	      slength--;
-	    }
-	  else if (MB_NULLWCH (mblength))
-	    return i;
-	  else
-	    {
-	      i += mblength;
-	      slength -= mblength;
-	    }
-	}
-      else
-#endif
-      ++i;
-
-      c = s[i];
-
-      if (c == 0)
-	break;
-      else if (c == '[')
-	count++;
-      else if (c == ']')
-	count--;
-    }
-
-  return i;
-}
+/* skipsubscript moved to subst.c to use private functions. 2009/02/24. */
 
 /* This function is called with SUB pointing to just after the beginning
    `[' of an array subscript and removes the array element to which SUB
@@ -676,7 +635,7 @@ unbind_array_element (var, sub)
   char *akey;
   ARRAY_ELEMENT *ae;
 
-  len = skipsubscript (sub, 0);
+  len = skipsubscript (sub, 0, 0);
   if (sub[len] != ']' || len == 0)
     {
       builtin_error ("%s[%s: %s", var->name, sub, _(bash_badsub_errmsg));
@@ -699,6 +658,7 @@ unbind_array_element (var, sub)
 	  return -1;
 	}
       assoc_remove (assoc_cell (var), akey);
+      free (akey);
     }
   else
     {
@@ -770,7 +730,7 @@ valid_array_reference (name)
   char *t;
   int r, len;
 
-  t = xstrchr (name, '[');	/* ] */
+  t = mbschr (name, '[');	/* ] */
   if (t)
     {
       *t = '\0';
@@ -779,7 +739,7 @@ valid_array_reference (name)
       if (r == 0)
 	return 0;
       /* Check for a properly-terminated non-blank subscript. */
-      len = skipsubscript (t, 0);
+      len = skipsubscript (t, 0, 0);
       if (t[len] != ']' || len == 1)
 	return 0;
       for (r = 1; r < len; r++)
@@ -830,7 +790,7 @@ array_variable_name (s, subp, lenp)
   char *t, *ret;
   int ind, ni;
 
-  t = xstrchr (s, '[');
+  t = mbschr (s, '[');
   if (t == 0)
     {
       if (subp)
@@ -840,7 +800,7 @@ array_variable_name (s, subp, lenp)
       return ((char *)NULL);
     }
   ind = t - s;
-  ni = skipsubscript (s, ind);
+  ni = skipsubscript (s, ind, 0);
   if (ni <= ind + 1 || s[ni] != ']')
     {
       err_badarraysub (s);
@@ -883,15 +843,31 @@ array_variable_part (s, subp, lenp)
   return (var == 0 || invisible_p (var)) ? (SHELL_VAR *)0 : var;
 }
 
+#define INDEX_ERROR() \
+  do \
+    { \
+      if (var) \
+	err_badarraysub (var->name); \
+      else \
+	{ \
+	  t[-1] = '\0'; \
+	  err_badarraysub (s); \
+	  t[-1] = '[';	/* ] */\
+	} \
+      return ((char *)NULL); \
+    } \
+  while (0)
+
 /* Return a string containing the elements in the array and subscript
    described by S.  If the subscript is * or @, obeys quoting rules akin
    to the expansion of $* and $@ including double quoting.  If RTYPE
    is non-null it gets 1 if the array reference is name[*], 2 if the
    reference is name[@], and 0 otherwise. */
 static char *
-array_value_internal (s, quoted, allow_all, rtype)
+array_value_internal (s, quoted, flags, rtype, indp)
      char *s;
-     int quoted, allow_all, *rtype;
+     int quoted, flags, *rtype;
+     arrayind_t *indp;
 {
   int len;
   arrayind_t ind;
@@ -917,12 +893,12 @@ array_value_internal (s, quoted, allow_all, rtype)
     {
       if (rtype)
 	*rtype = (t[0] == '*') ? 1 : 2;
-      if (allow_all == 0)
+      if ((flags & AV_ALLOWALL) == 0)
 	{
 	  err_badarraysub (s);
 	  return ((char *)NULL);
 	}
-      else if (var == 0 || value_cell (var) == 0)
+      else if (var == 0 || value_cell (var) == 0)	/* XXX - check for invisible_p(var) ? */
 	return ((char *)NULL);
       else if (array_p (var) == 0 && assoc_p (var) == 0)
 	l = add_string_to_list (value_cell (var), (WORD_LIST *)NULL);
@@ -956,20 +932,22 @@ array_value_internal (s, quoted, allow_all, rtype)
 	*rtype = 0;
       if (var == 0 || array_p (var) || assoc_p (var) == 0)
 	{
-	  ind = array_expand_index (t, len);
-	  if (ind < 0)
+	  if ((flags & AV_USEIND) == 0 || indp == 0)
 	    {
-index_error:
-	      if (var)
-		err_badarraysub (var->name);
-	      else
+	      ind = array_expand_index (t, len);
+	      if (ind < 0)
 		{
-		  t[-1] = '\0';
-		  err_badarraysub (s);
-		  t[-1] = '[';	/* ] */
+		  /* negative subscripts to indexed arrays count back from end */
+		  if (var && array_p (var))
+		    ind = array_max_index (array_cell (var)) + 1 + ind;
+		  if (ind < 0)
+		    INDEX_ERROR();
 		}
-	      return ((char *)NULL);
+	      if (indp)
+		*indp = ind;
 	    }
+	  else if (indp)
+	    ind = *indp;
 	}
       else if (assoc_p (var))
 	{
@@ -977,15 +955,18 @@ index_error:
 	  akey = expand_assignment_string_to_string (t, 0);	/* [ */
 	  t[len - 1] = ']';
 	  if (akey == 0 || *akey == 0)
-	    goto index_error;
+	    INDEX_ERROR();
 	}
      
-      if (var == 0)
+      if (var == 0 || value_cell (var) == 0)	/* XXX - check invisible_p(var) ? */
 	return ((char *)NULL);
       if (array_p (var) == 0 && assoc_p (var) == 0)
 	return (ind == 0 ? value_cell (var) : (char *)NULL);
       else if (assoc_p (var))
-	retval = assoc_reference (assoc_cell (var), akey);
+        {
+	  retval = assoc_reference (assoc_cell (var), akey);
+	  free (akey);
+        }
       else
 	retval = array_reference (array_cell (var), ind);
     }
@@ -996,23 +977,25 @@ index_error:
 /* Return a string containing the elements described by the array and
    subscript contained in S, obeying quoting for subscripts * and @. */
 char *
-array_value (s, quoted, rtype)
+array_value (s, quoted, flags, rtype, indp)
      char *s;
-     int quoted, *rtype;
+     int quoted, flags, *rtype;
+     arrayind_t *indp;
 {
-  return (array_value_internal (s, quoted, 1, rtype));
+  return (array_value_internal (s, quoted, flags|AV_ALLOWALL, rtype, indp));
 }
 
 /* Return the value of the array indexing expression S as a single string.
-   If ALLOW_ALL is 0, do not allow `@' and `*' subscripts.  This is used
-   by other parts of the shell such as the arithmetic expression evaluator
-   in expr.c. */
+   If (FLAGS & AV_ALLOWALL) is 0, do not allow `@' and `*' subscripts.  This
+   is used by other parts of the shell such as the arithmetic expression
+   evaluator in expr.c. */
 char *
-get_array_value (s, allow_all, rtype)
+get_array_value (s, flags, rtype, indp)
      char *s;
-     int allow_all, *rtype;
+     int flags, *rtype;
+     arrayind_t *indp;
 {
-  return (array_value_internal (s, 0, allow_all, rtype));
+  return (array_value_internal (s, 0, flags, rtype, indp));
 }
 
 char *
@@ -1029,6 +1012,9 @@ array_keys (s, quoted)
 
   /* [ */
   if (var == 0 || ALL_ELEMENT_SUB (t[0]) == 0 || t[1] != ']')
+    return (char *)NULL;
+
+  if (var_isset (var) == 0 || invisible_p (var))
     return (char *)NULL;
 
   if (array_p (var) == 0 && assoc_p (var) == 0)

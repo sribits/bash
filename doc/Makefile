@@ -16,12 +16,12 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 PACKAGE = bash
-VERSION = 4.0-release
+VERSION = 4.2-release
 
 PACKAGE_BUGREPORT = bug-bash@gnu.org
 PACKAGE_NAME = bash
-PACKAGE_STRING = bash 4.0-release
-PACKAGE_VERSION = 4.0-release
+PACKAGE_STRING = bash 4.2-release
+PACKAGE_VERSION = 4.2-release
 
 #
 SHELL = /bin/sh
@@ -54,7 +54,7 @@ man3dir = $(mandir)/$(manpfx)3
 
 INSTALL = /usr/bin/install -c
 INSTALL_DATA = ${INSTALL} -m 644
-BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.0
+BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.2
 
 SUPPORT_SRCDIR = $(topdir)/support
 
@@ -94,7 +94,7 @@ GROFF	    = groff
 HSUSER      = $(RL_LIBDIR)/doc/hsuser.texi
 RLUSER      = $(RL_LIBDIR)/doc/rluser.texi
 
-BASHREF_FILES = $(srcdir)/bashref.texi $(srcdir)/version.texi
+BASHREF_FILES = $(srcdir)/bashref.texi $(srcdir)/fdl.texi $(srcdir)/version.texi
 
 .SUFFIXES:	.0 .1 .3 .ms .ps .txt .dvi .html .pdf
 
@@ -161,7 +161,7 @@ html: ${HTMLFILES}
 pdf: ${PDFFILES}
 
 bashref.dvi: $(BASHREF_FILES) $(HSUSER) $(RLUSER)
-	${SET_TEXINPUTS} $(TEXI2DVI) $(srcdir)/bashref.texi
+	${SET_TEXINPUTS} $(TEXI2DVI) $(srcdir)/bashref.texi || { ${RM} $@ ; exit 1; }
 
 bashref.info: $(BASHREF_FILES) $(HSUSER) $(RLUSER)
 	$(MAKEINFO) --no-split -I$(TEXINPUTDIR) $(srcdir)/bashref.texi

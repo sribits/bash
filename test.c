@@ -2,7 +2,7 @@
 
 /* Modified to run with the GNU shell Apr 25, 1988 by bfox. */
 
-/* Copyright (C) 1987-2009 Free Software Foundation, Inc.
+/* Copyright (C) 1987-2010 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -65,8 +65,9 @@ extern int errno;
 #endif
 
 #if !defined (STREQ)
-#  define STREQ(a, b) ((a)[0] == (b)[0] && strcmp (a, b) == 0)
+#  define STREQ(a, b) ((a)[0] == (b)[0] && strcmp ((a), (b)) == 0)
 #endif /* !STREQ */
+#define STRCOLLEQ(a, b) ((a)[0] == (b)[0] && strcoll ((a), (b)) == 0)
 
 #if !defined (R_OK)
 #define R_OK 4
@@ -375,12 +376,16 @@ binary_test (op, arg1, arg2, flags)
 
   if (op[0] == '=' && (op[1] == '\0' || (op[1] == '=' && op[2] == '\0')))
     return (patmatch ? patcomp (arg1, arg2, EQ) : STREQ (arg1, arg2));
-
   else if ((op[0] == '>' || op[0] == '<') && op[1] == '\0')
-    return ((op[0] == '>') ? (strcmp (arg1, arg2) > 0) : (strcmp (arg1, arg2) < 0));
-
+    {
+      if (shell_compatibility_level > 40 && flags & TEST_LOCALE)
+	return ((op[0] == '>') ? (strcoll (arg1, arg2) > 0) : (strcoll (arg1, arg2) < 0));
+      else
+	return ((op[0] == '>') ? (strcmp (arg1, arg2) > 0) : (strcmp (arg1, arg2) < 0));
+    }
   else if (op[0] == '!' && op[1] == '=' && op[2] == '\0')
     return (patmatch ? patcomp (arg1, arg2, NE) : (STREQ (arg1, arg2) == 0));
+    
 
   else if (op[2] == 't')
     {
@@ -493,6 +498,7 @@ unary_test (op, arg)
 {
   intmax_t r;
   struct stat stat_buf;
+  SHELL_VAR *v;
      
   switch (op[1])
     {
@@ -594,6 +600,10 @@ unary_test (op, arg)
 
     case 'o':			/* True if option `arg' is set. */
       return (minus_o_option_value (arg) == 1);
+
+    case 'v':
+      v = find_variable (arg);
+      return (v && var_isset (v) ? TRUE : FALSE);
     }
 
   /* We can't actually get here, but this shuts up gcc. */
@@ -667,7 +677,7 @@ test_unop (op)
     case 'a': case 'b': case 'c': case 'd': case 'e':
     case 'f': case 'g': case 'h': case 'k': case 'n':
     case 'o': case 'p': case 'r': case 's': case 't':
-    case 'u': case 'w': case 'x': case 'z':
+    case 'u': case 'v': case 'w': case 'x': case 'z':
     case 'G': case 'L': case 'O': case 'S': case 'N':
       return (1);
     }

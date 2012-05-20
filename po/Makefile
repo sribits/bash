@@ -9,7 +9,7 @@
 # General Public License and is *not* in the public domain.
 
 PACKAGE = bash
-VERSION = 4.0-release
+VERSION = 4.2-release
 
 SHELL = /bin/sh
 
@@ -19,7 +19,7 @@ top_srcdir = ..
 
 
 topdir = ..
-BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.0
+BUILD_DIR = /home/smalik/Downloads/arm/bash/bash-4.2
 
 prefix = /usr/local
 exec_prefix = ${prefix}
@@ -44,10 +44,10 @@ MSGINIT = msginit
 MSGCONV = msgconv
 MSGFILTER = msgfilter
 
-POFILES =  en@quot.po en@boldquot.po af.po bg.po ca.po cs.po de.po eo.po es.po et.po fr.po hu.po id.po ja.po lt.po nl.po pl.po pt_BR.po ro.po ru.po sk.po sv.po tr.po vi.po zh_TW.po
-GMOFILES =  en@quot.gmo en@boldquot.gmo af.gmo bg.gmo ca.gmo cs.gmo de.gmo eo.gmo es.gmo et.gmo fr.gmo hu.gmo id.gmo ja.gmo lt.gmo nl.gmo pl.gmo pt_BR.gmo ro.gmo ru.gmo sk.gmo sv.gmo tr.gmo vi.gmo zh_TW.gmo
-UPDATEPOFILES =  en@quot.po-update en@boldquot.po-update af.po-update bg.po-update ca.po-update cs.po-update de.po-update eo.po-update es.po-update et.po-update fr.po-update hu.po-update id.po-update ja.po-update lt.po-update nl.po-update pl.po-update pt_BR.po-update ro.po-update ru.po-update sk.po-update sv.po-update tr.po-update vi.po-update zh_TW.po-update
-DUMMYPOFILES =  en@quot.nop en@boldquot.nop af.nop bg.nop ca.nop cs.nop de.nop eo.nop es.nop et.nop fr.nop hu.nop id.nop ja.nop lt.nop nl.nop pl.nop pt_BR.nop ro.nop ru.nop sk.nop sv.nop tr.nop vi.nop zh_TW.nop
+POFILES =  en@quot.po en@boldquot.po af.po bg.po ca.po cs.po de.po eo.po es.po et.po fi.po fr.po ga.po hu.po id.po ja.po lt.po nl.po pl.po pt_BR.po ro.po ru.po sk.po sv.po tr.po uk.po vi.po zh_CN.po zh_TW.po
+GMOFILES =  en@quot.gmo en@boldquot.gmo af.gmo bg.gmo ca.gmo cs.gmo de.gmo eo.gmo es.gmo et.gmo fi.gmo fr.gmo ga.gmo hu.gmo id.gmo ja.gmo lt.gmo nl.gmo pl.gmo pt_BR.gmo ro.gmo ru.gmo sk.gmo sv.gmo tr.gmo uk.gmo vi.gmo zh_CN.gmo zh_TW.gmo
+UPDATEPOFILES =  en@quot.po-update en@boldquot.po-update af.po-update bg.po-update ca.po-update cs.po-update de.po-update eo.po-update es.po-update et.po-update fi.po-update fr.po-update ga.po-update hu.po-update id.po-update ja.po-update lt.po-update nl.po-update pl.po-update pt_BR.po-update ro.po-update ru.po-update sk.po-update sv.po-update tr.po-update uk.po-update vi.po-update zh_CN.po-update zh_TW.po-update
+DUMMYPOFILES =  en@quot.nop en@boldquot.nop af.nop bg.nop ca.nop cs.nop de.nop eo.nop es.nop et.nop fi.nop fr.nop ga.nop hu.nop id.nop ja.nop lt.nop nl.nop pl.nop pt_BR.nop ro.nop ru.nop sk.nop sv.nop tr.nop uk.nop vi.nop zh_CN.nop zh_TW.nop
 DISTFILES.common = Makefile.in.in remove-potcdate.sin \
 $(DISTFILES.common.extra1) $(DISTFILES.common.extra2) $(DISTFILES.common.extra3)
 DISTFILES = $(DISTFILES.common) Makevars POTFILES.in $(DOMAIN).pot stamp-po \
@@ -59,6 +59,7 @@ POTFILES = \
      ../bashhist.c \
      ../bashline.c \
      ../braces.c \
+     ../builtins/alias.def \
      ../builtins/bind.def \
      ../builtins/break.def \
      ../builtins/caller.def \
@@ -102,12 +103,14 @@ POTFILES = \
      ../general.c \
      ../input.c \
      ../jobs.c \
+     ../lib/intl/os2compat.c \
      ../lib/malloc/malloc.c \
      ../lib/malloc/stats.c \
      ../lib/malloc/table.c \
      ../lib/malloc/watch.c \
      ../lib/sh/fmtulong.c \
      ../lib/sh/netopen.c \
+     ../locale.c \
      ../mailcheck.c \
      ../make_cmd.c \
      ../nojobs.c \
@@ -124,9 +127,10 @@ POTFILES = \
      ../trap.c \
      ../variables.c \
      ../version.c \
+     ../version2.c \
      ../xmalloc.c
 
-CATALOGS =  en@quot.gmo en@boldquot.gmo af.gmo bg.gmo ca.gmo cs.gmo de.gmo eo.gmo es.gmo et.gmo fr.gmo hu.gmo id.gmo ja.gmo lt.gmo nl.gmo pl.gmo pt_BR.gmo ro.gmo ru.gmo sk.gmo sv.gmo tr.gmo vi.gmo zh_TW.gmo
+CATALOGS =  en@quot.gmo en@boldquot.gmo af.gmo bg.gmo ca.gmo cs.gmo de.gmo eo.gmo es.gmo et.gmo fi.gmo fr.gmo ga.gmo hu.gmo id.gmo ja.gmo lt.gmo nl.gmo pl.gmo pt_BR.gmo ro.gmo ru.gmo sk.gmo sv.gmo tr.gmo uk.gmo vi.gmo zh_CN.gmo zh_TW.gmo
 
 # Makevars gets inserted here. (Don't remove this line!)
 # Makefile variables for PO directory in any package using GNU gettext.

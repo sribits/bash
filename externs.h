@@ -1,7 +1,7 @@
 /* externs.h -- extern function declarations which do not appear in their
    own header file. */
 
-/* Copyright (C) 1993-2009 Free Software Foundation, Inc.
+/* Copyright (C) 1993-2010 Free Software Foundation, Inc.
 
    This file is part of GNU Bash, the Bourne Again SHell.
 
@@ -54,6 +54,12 @@ extern void print_cond_command __P((COND_COM *));
 #endif
 
 /* set -x support */
+extern void xtrace_init __P((void));
+#ifdef NEED_XTRACE_SET_DECL
+extern void xtrace_set __P((int, FILE *));
+#endif
+extern void xtrace_fdchk __P((int));
+extern void xtrace_reset __P((void));
 extern char *indirection_level_string __P((void));
 extern void xtrace_print_assignment __P((char *, char *, int, int));
 extern void xtrace_print_word_list __P((WORD_LIST *, int));
@@ -108,7 +114,7 @@ extern int get_current_prompt_level __P((void));
 extern void set_current_prompt_level __P((int));
 
 #if defined (HISTORY)
-extern char *history_delimiting_chars __P((void));
+extern char *history_delimiting_chars __P((const char *));
 #endif
 
 /* Declarations for functions defined in locale.c */
@@ -135,7 +141,7 @@ extern int find_string_in_alist __P((char *, STRING_INT_ALIST *, int));
 extern char *find_token_in_alist __P((int, STRING_INT_ALIST *, int));
 extern int find_index_in_alist __P((char *, STRING_INT_ALIST *, int));
 
-extern char *substring __P((char *, int, int));
+extern char *substring __P((const char *, int, int));
 extern char *strsub __P((char *, char *, char *, int));
 extern char *strcreplace __P((char *, int, char *, int));
 extern void strip_leading __P((char *));
@@ -172,8 +178,10 @@ extern long get_clk_tck __P((void));
 extern void clock_t_to_secs ();
 extern void print_clock_t ();
 
-/* Declarations for functions defined in lib/sh/fdprintf.c */
-extern void fdprintf __P((int, const char *, ...))  __attribute__((__format__ (printf, 2, 3)));
+/* Declarations for functions defined in lib/sh/dprintf.c */
+#if !defined (HAVE_DPRINTF)
+extern void dprintf __P((int, const char *, ...))  __attribute__((__format__ (printf, 2, 3)));
+#endif
 
 /* Declarations for functions defined in lib/sh/fmtulong.c */
 #define FL_PREFIX     0x01    /* add 0x, 0X, or 0 prefix as appropriate */
@@ -191,7 +199,13 @@ extern char *fmtullong __P((unsigned long long int, int, char *, size_t, int));
 /* Declarations for functions defined in lib/sh/fmtumax.c */
 extern char *fmtumax __P((uintmax_t, int, char *, size_t, int));
 
+/* Declarations for functions defined in lib/sh/fnxform.c */
+extern char *fnx_fromfs __P((char *, size_t));
+extern char *fnx_tofs __P((char *, size_t));
+
 /* Declarations for functions defined in lib/sh/fpurge.c */
+
+#if defined NEED_FPURGE_DECL
 #if !HAVE_DECL_FPURGE
 
 #if HAVE_FPURGE
@@ -200,7 +214,7 @@ extern char *fmtumax __P((uintmax_t, int, char *, size_t, int));
 extern int fpurge __P((FILE *stream));
 
 #endif /* HAVE_DECL_FPURGE */
-
+#endif /* NEED_FPURGE_DECL */
 
 /* Declarations for functions defined in lib/sh/getcwd.c */
 #if !defined (HAVE_GETCWD)
@@ -223,6 +237,21 @@ extern char *uitos __P((uintmax_t));
 #define MP_IGNDOT	0x08
 
 extern char *sh_makepath __P((const char *, const char *, int));
+
+/* declarations for functions defined in lib/sh/mbscasecmp.c */
+#if !defined (HAVE_MBSCASECMP)
+extern char *mbscasecmp __P((const char *, const char *));
+#endif
+
+/* declarations for functions defined in lib/sh/mbschr.c */
+#if !defined (HAVE_MBSCHR)
+extern char *mbschr __P((const char *, int));
+#endif
+
+/* declarations for functions defined in lib/sh/mbscmp.c */
+#if !defined (HAVE_MBSCMP)
+extern char *mbscmp __P((const char *, const char *));
+#endif
 
 /* declarations for functions defined in lib/sh/netconn.c */
 extern int isnetconn __P((int));
@@ -274,9 +303,13 @@ extern int sh_regmatch __P((const char *, const char *, int));
 #define SHMAT_SUBEXP		0x001	/* save subexpressions in SH_REMATCH */
 #define SHMAT_PWARN		0x002	/* print a warning message on invalid regexp */
 
+/* declarations for functions defined in lib/sh/shmbchar.c */
+extern size_t mbstrlen __P((const char *));
+extern char *mbsmbchar __P((const char *));
+
 /* declarations for functions defined in lib/sh/shquote.c */
-extern char *sh_single_quote __P((char *));
-extern char *sh_double_quote __P((char *));
+extern char *sh_single_quote __P((const char *));
+extern char *sh_double_quote __P((const char *));
 extern char *sh_mkdoublequoted __P((const char *, int, int));
 extern char *sh_un_double_quote __P((char *));
 extern char *sh_backslash_quote __P((char *));
@@ -293,6 +326,16 @@ extern int strncasecmp __P((const char *, const char *, int));
 extern int strcasecmp __P((const char *, const char *));
 #endif /* HAVE_STRCASECMP */
 
+/* declarations for functions defined in lib/sh/strcasestr.c */
+#if ! HAVE_STRCASESTR
+extern char *strcasestr __P((const char *, const char *));
+#endif
+
+/* declarations for functions defined in lib/sh/strchrnul.c */
+#if ! HAVE_STRCHRNUL
+extern char *strchrnul __P((const char *, int));
+#endif
+
 /* declarations for functions defined in lib/sh/strerror.c */
 #if !defined (HAVE_STRERROR) && !defined (strerror)
 extern char *strerror __P((int));
@@ -302,9 +345,6 @@ extern char *strerror __P((int));
 #if !defined (HAVE_STRFTIME) && defined (NEED_STRFTIME_DECL)
 extern size_t strftime __P((char *, size_t, const char *, const struct tm *));
 #endif
-
-/* declarations for functions defined in lib/sh/strindex.c */
-extern char *strindex __P((const char *, const char *));
 
 /* declarations for functions and structures defined in lib/sh/stringlist.c */
 
@@ -419,12 +459,11 @@ extern int uconvert __P((char *, long *, long *));
 extern unsigned int falarm __P((unsigned int, unsigned int));
 extern unsigned int fsleep __P((unsigned int, unsigned int));
 
+/* declarations for functions defined in lib/sh/unicode.c */
+extern int u32cconv __P((unsigned long, char *));
+
 /* declarations for functions defined in lib/sh/winsize.c */
 extern void get_new_window_size __P((int, int *, int *));
-
-/* declarations for functions defined in lib/sh/xstrchr.c */
-#undef xstrchr
-extern char *xstrchr __P((const char *, int));
 
 /* declarations for functions defined in lib/sh/zcatfd.c */
 extern int zcatfd __P((int, int, char *));
@@ -446,5 +485,14 @@ extern void zsyncfd __P((int));
 
 /* declarations for functions defined in lib/sh/zwrite.c */
 extern int zwrite __P((int, char *, size_t));
+
+/* declarations for functions defined in lib/glob/gmisc.c */
+extern int match_pattern_char __P((char *, char *));
+extern int umatchlen __P((char *, size_t));
+
+#if defined (HANDLE_MULTIBYTE)
+extern int match_pattern_wchar __P((wchar_t *, wchar_t *));
+extern int wmatchlen __P((wchar_t *, size_t));
+#endif
 
 #endif /* _EXTERNS_H_ */
